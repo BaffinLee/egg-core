@@ -522,50 +522,101 @@ describe('test/egg.test.js', () => {
   });
 
   describe('boot', () => {
-
     describe('boot success', () => {
-      it('should success', async () => {
-        const app = utils.createApp('boot');
-        app.loader.loadAll();
-        await app.ready();
-        assert.deepStrictEqual(
-          app.bootLog,
-          [
-            'configDidLoad',
-            'didLoad',
-            'willReady',
-          ]);
-        await sleep(10);
-        assert.deepStrictEqual(
-          app.bootLog,
-          [
-            'configDidLoad',
-            'didLoad',
-            'willReady',
-            'didReady',
-          ]);
-        await app[Symbol.for('EggCore#triggerServerDidReady')]();
-        await sleep(10);
-        assert.deepStrictEqual(
-          app.bootLog,
-          [
-            'configDidLoad',
-            'didLoad',
-            'willReady',
-            'didReady',
-            'serverDidReady',
-          ]);
-        await app.close();
-        assert.deepStrictEqual(
-          app.bootLog,
-          [
-            'configDidLoad',
-            'didLoad',
-            'willReady',
-            'didReady',
-            'serverDidReady',
-            'beforeClose',
-          ]);
+      describe('app worker', () => {
+        it('should success', async () => {
+          const app = utils.createApp('boot');
+          app.loader.loadAll();
+          await app.ready();
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+            ]);
+          await sleep(10);
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+              'didReady',
+            ]);
+          await app[Symbol.for('EggCore#triggerServerDidReady')]();
+          await sleep(10);
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+              'didReady',
+              'serverDidReady',
+            ]);
+          await app.close();
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+              'didReady',
+              'serverDidReady',
+              'beforeClose',
+            ]);
+        });
+      });
+
+      describe('agent worker', () => {
+        it('should success', async () => {
+          const app = utils.createApp('boot');
+          app.loader.loadPlugin();
+          app.loader.loadConfig();
+          app.loader.loadAgentExtend();
+          app.loader.loadCustomAgent();
+          app[Symbol.for('EggCore#startBoot')]();
+          await app.ready();
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+            ]);
+          await sleep(10);
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+              'didReady',
+            ]);
+          await app[Symbol.for('EggCore#triggerServerDidReady')]();
+          await sleep(10);
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+              'didReady',
+              'serverDidReady',
+            ]);
+          await app.close();
+          assert.deepStrictEqual(
+            app.bootLog,
+            [
+              'configDidLoad',
+              'didLoad',
+              'willReady',
+              'didReady',
+              'serverDidReady',
+              'beforeClose',
+            ]);
+        });
       });
     });
 
@@ -658,6 +709,58 @@ describe('test/egg.test.js', () => {
             'willReady',
             'beforeClose',
           ]);
+      });
+    });
+
+    describe('serverDidLoad failed', () => {
+      it('should throw error', async () => {
+        const app = utils.createApp('boot-serverDidLoad-error');
+        app.loader.loadAll();
+        await app.ready();
+        await sleep(10);
+        assert.deepStrictEqual(app.bootLog, [
+          'configDidLoad',
+          'didLoad',
+          'willReady',
+          'didReady',
+        ]);
+        await app[Symbol.for('EggCore#triggerServerDidReady')]();
+        let error;
+        try {
+          await awaitEvent(app, 'error');
+        } catch (e) {
+          error = e;
+        }
+        assert.strictEqual(error.message, 'serverDidReady failed');
+      });
+    });
+
+    describe('use ready(func)', () => {
+      it('should success', async () => {
+        const app = utils.createApp('boot');
+        app.loader.loadAll();
+        await app.ready();
+        assert.deepStrictEqual(
+          app.bootLog,
+          [
+            'configDidLoad',
+            'didLoad',
+            'willReady',
+          ]);
+        app.ready(() => {
+          app.bootLog.push('readyFunction');
+        });
+        await sleep(10);
+        assert.deepStrictEqual(
+          app.bootLog,
+          [
+            'configDidLoad',
+            'didLoad',
+            'willReady',
+            'readyFunction',
+            'didReady',
+          ]);
+        app.close();
       });
     });
   });
